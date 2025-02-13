@@ -1,4 +1,3 @@
-import React from 'react';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { body, validationResult } from 'express-validator';
 import connectToDatabase from '@/DB/utils/db';
@@ -82,7 +81,7 @@ export default async function(req: NextApiRequest, res: NextApiResponse) {
                 const postData = {
                     ...post[0],
                     tags: tags.map(tag => tag.tag),
-                    comments: comments 
+                    comments: comments
                 };
 
                 return res.status(200).json(postData)
@@ -122,8 +121,55 @@ export default async function(req: NextApiRequest, res: NextApiResponse) {
                 res.status(500).json({ message: "Ошибка сервера" });
             }
         }
-    } else {
-        res.setHeader('Allow', ['POST', 'GET']);
-        res.status(405).end(`Метод ${req.method} не разрешен`);
+    } else if (req.method === 'DELETE') {
+        const { id } = req.query;
+    
+        if (!id) {
+            return res.status(400).json({ message: "Не указан идентификатор поста" });
+        }
+    
+        const postId = parseInt(id as string, 10);
+        if (isNaN(postId)) {
+            return res.status(400).json({ message: "Неверный формат идентификатора поста" });
+        }
+    
+        try {
+            // Проверка существования поста
+            const [post] = await connection.query('SELECT * FROM posts WHERE id = ?', [postId]);
+            if (post.length === 0) {
+                return res.status(404).json({ message: "Пост не найден" });
+            }
+    
+            // Начало транзакции
+            await connection.beginTransaction();
+    
+            // Удаление комментариев
+            const deleteCommentsQuery = `
+                DELETE FROM comments WHERE postId = ?;
+            `;
+            await connection.query(deleteCommentsQuery, [postId]);
+    
+            // Удаление тегов
+            const deleteTagsQuery = `
+                DELETE FROM tags WHERE postId = ?;
+            `;
+            await connection.query(deleteTagsQuery, [postId]);
+    
+            // Удаление поста
+            const deletePostQuery = `
+                DELETE FROM posts WHERE id = ?;
+            `;
+            await connection.query(deletePostQuery, [postId]);
+    
+            // Подтверждение транзакции
+            await connection.commit();
+    
+            return res.status(200).json({ message: "Пост успешно удален" });
+        } catch (error) {
+            // Откат транзакции в случае ошибки
+            await connection.rollback();
+            console.error("Ошибка при удалении поста:", error);
+            res.status(500).json({ message: "Ошибка сервера", error: error.message });
+        }
     }
 }
