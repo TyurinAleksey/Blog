@@ -1,8 +1,11 @@
+import React from 'react'
 
-export default function Home() {
+function Home() {
   return (
     <div>
-      
+      Домашняя страница работает
     </div>
-  );
+  )
 }
+
+export default Home

@@ -1,15 +1,13 @@
-import "./globals.css";
+import '@/app/styles/globals.css';
+import Header from './components/Header';
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru">
-      <title>MyBlog</title>
+    <html suppressHydrationWarning lang="ru">
+      <head />
       <body>
-        {children}
+          <Header />
+          <main>{children}</main>
       </body>
     </html>
   );
